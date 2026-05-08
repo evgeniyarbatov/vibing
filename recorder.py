@@ -204,6 +204,14 @@ def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
         # 5. Clipboard + notification
         copy_to_clipboard(clean_text)
         notify("Vibing", "Transcription copied to clipboard ✓")
+
+        # 6. Clean up audio files now that transcript is safely written
+        for path in (raw_path, norm_path):
+            try:
+                os.remove(path)
+            except OSError as exc:
+                log.warning("Could not remove audio file %s: %s", path, exc)
+
         log.info("Done.")
 
     except subprocess.CalledProcessError as exc:
