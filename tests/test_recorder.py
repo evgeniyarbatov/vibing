@@ -72,13 +72,13 @@ class TestResolveOutputDir:
         result = recorder._resolve_output_dir("/absolute/custom/path")
         assert result == "/absolute/custom/path"
 
-    def test_relative_path_joined_with_base_dir(self):
+    def test_relative_path_joined_with_project_dir(self):
         result = recorder._resolve_output_dir("data")
-        assert result == os.path.join(recorder.BASE_DIR, "data")
+        assert result == os.path.join(recorder.PROJECT_DIR, "data")
 
     def test_relative_subdirectory(self):
         result = recorder._resolve_output_dir("outputs/audio")
-        assert result == os.path.join(recorder.BASE_DIR, "outputs/audio")
+        assert result == os.path.join(recorder.PROJECT_DIR, "outputs/audio")
 
 
 # ---------------------------------------------------------------------------
