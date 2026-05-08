@@ -75,8 +75,6 @@ Edit **`config.json`** in the project root. Changes take effect on the next rest
 | `ollama_prompt` | *(see file)* | Prompt sent to ollama. Must contain `{transcription}` — that placeholder is replaced with the raw whisper output |
 | `output_dir` | `~/Documents/vibing` | Root for all four output subdirectories. Relative paths are resolved from the project root; absolute paths are used as-is |
 
----
-
 ## Quick start
 
 ```bash
@@ -84,12 +82,6 @@ make run
 ```
 
 Runs the recorder in your terminal. Log output appears in real time and is also written to `logs/recorder.log`. Press **right Option** to start/stop recording. Stop with `Ctrl-C`.
-
-To follow the log in a separate terminal:
-
-```bash
-tail -f logs/recorder.log
-```
 
 ### Grant Accessibility access (required)
 
@@ -110,8 +102,6 @@ Without this step the key listener silently does nothing.
 | `make test` | Run the test suite |
 | `make clean` | Remove virtualenv and all captured data |
 
----
-
 ## Usage
 
 | Action | Gesture |
@@ -120,8 +110,6 @@ Without this step the key listener silently does nothing.
 | Stop recording | Tap right Option key again |
 
 The cleaned transcript is always saved to `data/clean-transcript/` even if you use the clipboard version.
-
----
 
 ## Troubleshooting
 
@@ -136,19 +124,3 @@ The cleaned transcript is always saved to `data/clean-transcript/` even if you u
 
 ### First transcription is slow
 → Whisper downloads the `small` model (~244 MB) on first use. Subsequent runs are fast.
-
----
-
-## File layout
-
-```
-vibing/
-├── scripts/
-│   └── recorder.py       # Main script
-├── logs/
-│   └── recorder.log      # Written at runtime (gitignored)
-├── config.json           # User configuration
-├── requirements.txt      # Python deps
-├── Makefile
-└── README.md
-```
