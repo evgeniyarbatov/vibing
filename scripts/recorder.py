@@ -9,6 +9,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -33,6 +34,11 @@ _DEFAULTS: dict = {
         "Remove filler words (um, uh, like, you know, so). Do not change the meaning, "
         "add information, or summarize. Return only the cleaned text with no preamble "
         "or explanation.\n\nTranscription:\n{transcription}"
+    ),
+    "ollama_filename_prompt": (
+        "Give a short, descriptive filename for this transcript. "
+        "Use lowercase with underscores, no extension, max 5 words. "
+        "Reply with ONLY the filename, nothing else.\n\nTranscript:\n{transcript}"
     ),
     "output_dir": "~/Documents/vibing",
     "hotkey": "alt_r",
@@ -150,6 +156,20 @@ def clean_with_ollama(raw_text: str) -> str:
     return resp.json()["response"].strip()
 
 
+def filename_from_ollama(clean_text: str) -> str:
+    prompt = cfg["ollama_filename_prompt"].format(transcript=clean_text)
+    resp = requests.post(
+        OLLAMA_URL,
+        json={"model": cfg["ollama_model"], "prompt": prompt, "stream": False},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    raw = resp.json()["response"].strip().lower()
+    # Sanitise: keep only alphanumeric and underscores, collapse spaces to underscore
+    slug = re.sub(r"[^a-z0-9]+", "_", raw).strip("_")
+    return slug or "transcript"
+
+
 # ---------------------------------------------------------------------------
 # Processing thread
 # ---------------------------------------------------------------------------
@@ -185,7 +205,8 @@ def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
 
         # 4. Clean up
         clean_text = clean_with_ollama(raw_text)
-        clean_path = os.path.join(CLEAN_TRANSCRIPT_DIR, f"{timestamp}.txt")
+        slug = filename_from_ollama(clean_text)
+        clean_path = os.path.join(CLEAN_TRANSCRIPT_DIR, f"{timestamp}_{slug}.txt")
         with open(clean_path, "w") as f:
             f.write(clean_text)
         log.info("Clean transcript: %s", clean_path)
