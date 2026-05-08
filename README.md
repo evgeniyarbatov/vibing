@@ -1,3 +1,3 @@
 # vibing
 
-Use local ollama and whisper to transcribe audio notes. Inspired by [vibing](https://vibingjustspeakit.github.io/Vibing/) which worked great until it suddenly stopped working :( 
+Use local ollama and whisper to transcribe audio notes. Inspired by [Vibing](https://vibingjustspeakit.github.io/Vibing/)
