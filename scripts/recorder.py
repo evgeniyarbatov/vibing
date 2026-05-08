@@ -13,6 +13,7 @@ import re
 import subprocess
 import sys
 import threading
+import time
 
 import numpy as np
 import requests
@@ -106,6 +107,9 @@ MIN_DURATION_SEC = 0.5
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
+_MAX_RETRIES = 3
+_CHUNK_WORDS = 300
+
 _whisper_model: WhisperModel | None = None
 
 
@@ -152,27 +156,76 @@ def transcribe(audio_path: str, output_dir: str) -> str:
     return out_path
 
 
+def _ollama_post(payload: dict, timeout: int) -> dict:
+    """POST to Ollama with exponential-backoff retries on timeout/connection errors."""
+    delay = 1
+    last_exc: Exception = RuntimeError("no attempts made")
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            resp = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.exceptions.Timeout as exc:
+            last_exc = exc
+            log.warning(
+                "Ollama timeout (attempt %d/%d), retrying in %ds…",
+                attempt, _MAX_RETRIES, delay,
+            )
+        except requests.exceptions.ConnectionError as exc:
+            last_exc = exc
+            log.warning(
+                "Ollama connection error (attempt %d/%d), retrying in %ds…",
+                attempt, _MAX_RETRIES, delay,
+            )
+        if attempt < _MAX_RETRIES:
+            time.sleep(delay)
+            delay *= 2
+    raise last_exc
+
+
+def _chunk_text(text: str, max_words: int) -> list[str]:
+    """Split text into chunks of at most max_words, breaking on sentence boundaries."""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    chunks: list[str] = []
+    current: list[str] = []
+    count = 0
+    for sent in sentences:
+        words = len(sent.split())
+        if count + words > max_words and current:
+            chunks.append(" ".join(current))
+            current, count = [sent], words
+        else:
+            current.append(sent)
+            count += words
+    if current:
+        chunks.append(" ".join(current))
+    return chunks
+
+
 def clean_with_ollama(raw_text: str) -> str:
-    prompt = cfg["ollama_prompt"].format(transcription=raw_text)
-    resp = requests.post(
-        OLLAMA_URL,
-        json={"model": cfg["ollama_model"], "prompt": prompt, "stream": False},
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.json()["response"].strip()
+    words = raw_text.split()
+    chunks = _chunk_text(raw_text, _CHUNK_WORDS) if len(words) > _CHUNK_WORDS else [raw_text]
+    if len(chunks) > 1:
+        log.info("Cleaning in %d chunks (%d words total).", len(chunks), len(words))
+    cleaned: list[str] = []
+    for chunk in chunks:
+        prompt = cfg["ollama_prompt"].format(transcription=chunk)
+        result = _ollama_post(
+            {"model": cfg["ollama_model"], "prompt": prompt, "stream": False},
+            timeout=120,
+        )
+        cleaned.append(result["response"].strip())
+    return " ".join(cleaned)
 
 
 def filename_from_ollama(clean_text: str) -> str:
-    prompt = cfg["ollama_filename_prompt"].format(transcript=clean_text)
-    resp = requests.post(
-        OLLAMA_URL,
-        json={"model": cfg["ollama_model"], "prompt": prompt, "stream": False},
-        timeout=30,
+    # Truncate to keep the filename prompt fast regardless of transcript length
+    prompt = cfg["ollama_filename_prompt"].format(transcript=clean_text[:500])
+    result = _ollama_post(
+        {"model": cfg["ollama_model"], "prompt": prompt, "stream": False},
+        timeout=60,
     )
-    resp.raise_for_status()
-    raw = resp.json()["response"].strip().lower()
-    # Sanitise: keep only alphanumeric and underscores, collapse spaces to underscore
+    raw = result["response"].strip().lower()
     slug = re.sub(r"[^a-z0-9]+", "_", raw).strip("_")
     return slug or "transcript"
 
