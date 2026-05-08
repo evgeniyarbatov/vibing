@@ -203,6 +203,49 @@ class TestProcessRecording:
         mock_clean.assert_not_called()
         mock_clip.assert_not_called()
 
+    def test_audio_files_removed_after_successful_transcription(self, tmp_path):
+        frames = self._frames(2.0)
+        raw_dir = tmp_path / "raw"
+        norm_dir = tmp_path / "norm"
+        transcript_dir = tmp_path / "transcripts"
+        for d in (raw_dir, norm_dir, transcript_dir):
+            d.mkdir()
+
+        transcript_file = transcript_dir / "20240101_000000.txt"
+        transcript_file.write_text("raw whisper output")
+
+        with patch.multiple(
+            "recorder",
+            RAW_AUDIO_DIR=str(raw_dir),
+            NORM_AUDIO_DIR=str(norm_dir),
+            RAW_TRANSCRIPT_DIR=str(transcript_dir),
+            CLEAN_TRANSCRIPT_DIR=str(transcript_dir),
+        ), \
+        patch("recorder.normalize_audio"), \
+        patch("recorder.transcribe", return_value=str(transcript_file)), \
+        patch("recorder.clean_with_ollama", return_value="clean output"), \
+        patch("recorder.copy_to_clipboard"), \
+        patch("recorder.notify"), \
+        patch("recorder.os.remove") as mock_remove:
+            recorder.process_recording("20240101_000000", frames)
+
+        removed = [call.args[0] for call in mock_remove.call_args_list]
+        assert os.path.join(str(raw_dir), "20240101_000000.wav") in removed
+        assert os.path.join(str(norm_dir), "20240101_000000.wav") in removed
+        assert len(removed) == 2
+
+    def test_audio_files_not_removed_on_pipeline_error(self, tmp_path):
+        frames = self._frames(2.0)
+        with patch.multiple("recorder", RAW_AUDIO_DIR=str(tmp_path), NORM_AUDIO_DIR=str(tmp_path)), \
+             patch("recorder.normalize_audio", side_effect=subprocess.CalledProcessError(
+                 1, "ffmpeg", stderr=b"codec error"
+             )), \
+             patch("recorder.notify"), \
+             patch("recorder.os.remove") as mock_remove:
+            recorder.process_recording("20240101_000000", frames)
+
+        mock_remove.assert_not_called()
+
     def test_subprocess_error_notifies_without_raising(self, tmp_path):
         frames = self._frames(2.0)
         with patch.multiple("recorder", RAW_AUDIO_DIR=str(tmp_path), NORM_AUDIO_DIR=str(tmp_path)), \
