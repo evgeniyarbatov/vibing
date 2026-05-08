@@ -108,15 +108,6 @@ audio_buffer: list[np.ndarray] = []
 # macOS helpers
 # ---------------------------------------------------------------------------
 
-def notify(title: str, message: str) -> None:
-    safe_msg = message.replace('"', "'")
-    safe_title = title.replace('"', "'")
-    subprocess.run(
-        ["osascript", "-e", f'display notification "{safe_msg}" with title "{safe_title}"'],
-        capture_output=True,
-    )
-
-
 def copy_to_clipboard(text: str) -> None:
     subprocess.run(["pbcopy"], input=text.encode(), check=True)
 
@@ -166,13 +157,11 @@ def clean_with_ollama(raw_text: str) -> str:
 def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
     try:
         log.info("Processing started.")
-        notify("Vibing", "Processing…")
 
         audio_data = np.concatenate(frames, axis=0)
         duration = len(audio_data) / SAMPLE_RATE
         if duration < MIN_DURATION_SEC:
             log.warning("Recording too short (%.2fs), skipping.", duration)
-            notify("Vibing", "Recording too short — skipped.")
             return
 
         # 1. Save raw audio
@@ -192,7 +181,6 @@ def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
         log.info("Raw transcript (%d chars)", len(raw_text))
 
         if not raw_text:
-            notify("Vibing", "No speech detected.")
             return
 
         # 4. Clean up
@@ -202,9 +190,8 @@ def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
             f.write(clean_text)
         log.info("Clean transcript: %s", clean_path)
 
-        # 5. Clipboard + notification
+        # 5. Clipboard
         copy_to_clipboard(clean_text)
-        notify("Vibing", "Transcription copied to clipboard ✓")
 
         # 6. Clean up audio files now that transcript is safely written
         for path in (raw_path, norm_path):
@@ -218,10 +205,8 @@ def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
     except subprocess.CalledProcessError as exc:
         stderr = (exc.stderr or b"").decode()[:120]
         log.error("Subprocess error: %s", stderr)
-        notify("Vibing", f"Error: {stderr[:80]}")
     except Exception as exc:  # noqa: BLE001
         log.error("Processing failed: %s", exc)
-        notify("Vibing", f"Error: {str(exc)[:80]}")
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +220,6 @@ def toggle_recording() -> None:
         audio_buffer = []
         is_recording = True
         log.info("Recording started.")
-        notify("Vibing", f"Recording… (press {cfg['hotkey']} to stop)")
     else:
         is_recording = False
         frames = audio_buffer[:]
@@ -276,8 +260,6 @@ def main() -> None:
         cfg["hotkey"],
         DATA_DIR,
     )
-    notify("Vibing", f"Ready — press {cfg['hotkey']} to record.")
-
     stream = sd.InputStream(
         samplerate=SAMPLE_RATE,
         channels=CHANNELS,
