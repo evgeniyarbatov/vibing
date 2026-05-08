@@ -85,6 +85,12 @@ make run
 
 Runs the recorder in your terminal. Log output appears in real time and is also written to `logs/recorder.log`. Press **right Option** to start/stop recording. Stop with `Ctrl-C`.
 
+To follow the log in a separate terminal:
+
+```bash
+tail -f logs/recorder.log
+```
+
 ### Grant Accessibility access (required)
 
 `pynput` needs the Accessibility permission to read global keyboard events.
@@ -100,7 +106,6 @@ Without this step the key listener silently does nothing.
 | Command | What it does |
 |---------|-------------|
 | `make run` | Start the recorder in the foreground |
-| `make logs` | Follow the live log (`logs/recorder.log`) |
 | `make test` | Run the test suite |
 | `make clean` | Remove virtualenv and all captured data |
 
