@@ -18,6 +18,7 @@ import numpy as np
 import requests
 import scipy.io.wavfile as wavfile
 import sounddevice as sd
+from faster_whisper import WhisperModel
 from pynput import keyboard
 
 # ---------------------------------------------------------------------------
@@ -104,6 +105,15 @@ MIN_DURATION_SEC = 0.5
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
+_whisper_model: WhisperModel | None = None
+
+
+def _get_whisper_model() -> WhisperModel:
+    global _whisper_model
+    if _whisper_model is None:
+        _whisper_model = WhisperModel("small", device="auto", compute_type="int8")
+    return _whisper_model
+
 # ---------------------------------------------------------------------------
 # State (GIL makes bool/list.append atomic enough for our use)
 # ---------------------------------------------------------------------------
@@ -131,18 +141,14 @@ def normalize_audio(input_path: str, output_path: str) -> None:
 
 
 def transcribe(audio_path: str, output_dir: str) -> str:
-    subprocess.run(
-        [
-            "whisper", audio_path,
-            "--model", "small",
-            "--output_dir", output_dir,
-            "--output_format", "txt",
-        ],
-        capture_output=True,
-        check=True,
-    )
+    model = _get_whisper_model()
+    segments, _ = model.transcribe(audio_path)
+    text = " ".join(seg.text.strip() for seg in segments)
     stem = os.path.splitext(os.path.basename(audio_path))[0]
-    return os.path.join(output_dir, stem + ".txt")
+    out_path = os.path.join(output_dir, stem + ".txt")
+    with open(out_path, "w") as f:
+        f.write(text)
+    return out_path
 
 
 def clean_with_ollama(raw_text: str) -> str:

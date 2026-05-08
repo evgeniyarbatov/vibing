@@ -14,7 +14,7 @@ mic → raw WAV → ffmpeg loudnorm → whisper small → ollama mistral-nemo �
 |------|------|--------|
 | Record | sounddevice (Python) | `data/raw-audio/TIMESTAMP.wav` |
 | Normalize | ffmpeg `loudnorm` | `data/normalized-audio/TIMESTAMP.wav` |
-| Transcribe | whisper `--model small` | `data/raw-transcript/TIMESTAMP.txt` |
+| Transcribe | faster-whisper `small` | `data/raw-transcript/TIMESTAMP.txt` |
 | Clean up | ollama `mistral-nemo` | `data/clean-transcript/TIMESTAMP.txt` |
 | Deliver | pbcopy + osascript | clipboard + macOS notification |
 
@@ -28,10 +28,10 @@ mic → raw WAV → ffmpeg loudnorm → whisper small → ollama mistral-nemo �
 brew install ffmpeg
 ```
 
-### 2. Whisper
+### 2. faster-whisper
 
 ```bash
-pip install openai-whisper
+pip install faster-whisper
 ```
 
 The first transcription downloads the `small` model (~244 MB) automatically.
@@ -133,8 +133,8 @@ The cleaned transcript is always saved to `data/clean-transcript/` even if you u
 ### No key events detected
 → Accessibility permission not granted. See [Grant Accessibility access](#grant-accessibility-access-required).
 
-### whisper not found
-→ Make sure `whisper` is on your `PATH`. If you installed it into a non-standard location, add it to your shell's `PATH` before running `make run`.
+### faster-whisper import error
+→ Run `pip install faster-whisper` (or `make install`) and make sure your virtualenv is active.
 
 ### ollama connection refused
 → Start ollama: `ollama serve` or install it as a service via `brew services start ollama`.
