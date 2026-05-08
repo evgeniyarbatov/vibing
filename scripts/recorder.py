@@ -29,6 +29,7 @@ PROJECT_DIR = os.path.dirname(BASE_DIR)
 
 _CONFIG_PATH = os.path.join(PROJECT_DIR, "config.json")
 _DEFAULTS: dict = {
+    "whisper_model": "small",
     "ollama_model": "mistral-nemo",
     "ollama_prompt": (
         "Clean up this voice transcription. Fix punctuation and capitalization. "
@@ -111,7 +112,7 @@ _whisper_model: WhisperModel | None = None
 def _get_whisper_model() -> WhisperModel:
     global _whisper_model
     if _whisper_model is None:
-        _whisper_model = WhisperModel("small", device="auto", compute_type="int8")
+        _whisper_model = WhisperModel(cfg["whisper_model"], device="auto", compute_type="int8")
     return _whisper_model
 
 # ---------------------------------------------------------------------------
