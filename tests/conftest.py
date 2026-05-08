@@ -7,8 +7,11 @@ scipy.io.wavfile — fine to stub; we test logic, not file I/O format
 """
 
 import enum
+import os
 import sys
 from unittest.mock import MagicMock
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 
 # pynput.keyboard.Key must behave like a real Enum so that _parse_hotkey

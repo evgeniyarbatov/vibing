@@ -23,8 +23,9 @@ from pynput import keyboard
 # Base directory & config
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 
-_CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
+_CONFIG_PATH = os.path.join(PROJECT_DIR, "config.json")
 _DEFAULTS: dict = {
     "ollama_model": "mistral-nemo",
     "ollama_prompt": (
@@ -47,10 +48,10 @@ def _load_config() -> dict:
 
 
 def _resolve_output_dir(raw: str) -> str:
-    """Expand ~ and resolve relative paths against BASE_DIR."""
+    """Expand ~ and resolve relative paths against PROJECT_DIR."""
     expanded = os.path.expanduser(raw)
     if not os.path.isabs(expanded):
-        return os.path.join(BASE_DIR, expanded)
+        return os.path.join(PROJECT_DIR, expanded)
     return expanded
 
 
@@ -76,7 +77,7 @@ CLEAN_TRANSCRIPT_DIR = os.path.join(DATA_DIR, "clean-transcript")
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
-LOG_PATH = os.path.join(BASE_DIR, "recorder.log")
+LOG_PATH = os.path.join(PROJECT_DIR, "logs", "recorder.log")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
