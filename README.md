@@ -65,7 +65,7 @@ Edit **`config.json`** in the project root. Changes take effect on the next rest
 {
   "ollama_model": "mistral-nemo",
   "ollama_prompt": "Clean up this voice transcription. ... {transcription}",
-  "output_dir": "data"
+  "output_dir": "~/Documents/vibing"
 }
 ```
 
