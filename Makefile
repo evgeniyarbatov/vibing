@@ -3,7 +3,7 @@ VENV_DIR := .venv
 PYTHON   := $(VENV_DIR)/bin/python3
 PIP      := $(VENV_DIR)/bin/pip3
 
-.PHONY: all setup test run logs clean
+.PHONY: all setup test run clean
 
 all: setup
 
@@ -23,10 +23,6 @@ test: setup
 ## Run the recorder in the foreground
 run: setup
 	$(PYTHON) scripts/recorder.py
-
-## Follow the live log
-logs:
-	@tail -f logs/recorder.log
 
 ## Remove virtualenv and all captured data
 clean:
