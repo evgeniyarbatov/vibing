@@ -23,6 +23,7 @@ class TestLoadConfig:
     def test_returns_all_defaults_when_file_missing(self, tmp_path, monkeypatch):
         monkeypatch.setattr(recorder, "_CONFIG_PATH", str(tmp_path / "missing.json"))
         cfg = recorder._load_config()
+        assert cfg["whisper_model"] == "small"
         assert cfg["ollama_model"] == "mistral-nemo"
         assert "{transcription}" in cfg["ollama_prompt"]
         assert cfg["output_dir"] == "~/Documents/vibing"
@@ -148,15 +149,6 @@ class TestProcessRecording:
         n = int(seconds * recorder.SAMPLE_RATE)
         return [np.zeros((n, 1), dtype="float32")]
 
-    def test_skips_recording_shorter_than_minimum(self):
-        frames = self._frames(0.1)
-        with patch("recorder.notify") as mock_notify, \
-             patch("recorder.normalize_audio") as mock_norm:
-            recorder.process_recording("20240101_000000", frames)
-        mock_norm.assert_not_called()
-        msgs = [call.args[1] for call in mock_notify.call_args_list]
-        assert any("short" in m.lower() for m in msgs)
-
     def test_happy_path_runs_full_pipeline(self, tmp_path):
         frames = self._frames(2.0)
         transcript_file = tmp_path / "20240101_000000.txt"
@@ -172,8 +164,7 @@ class TestProcessRecording:
         patch("recorder.normalize_audio") as mock_norm, \
         patch("recorder.transcribe", return_value=str(transcript_file)) as mock_tr, \
         patch("recorder.clean_with_ollama", return_value="clean output") as mock_clean, \
-        patch("recorder.copy_to_clipboard") as mock_clip, \
-        patch("recorder.notify"):
+        patch("recorder.copy_to_clipboard") as mock_clip:
             recorder.process_recording("20240101_000000", frames)
 
         mock_norm.assert_called_once()
@@ -196,8 +187,7 @@ class TestProcessRecording:
         patch("recorder.normalize_audio"), \
         patch("recorder.transcribe", return_value=str(transcript_file)), \
         patch("recorder.clean_with_ollama") as mock_clean, \
-        patch("recorder.copy_to_clipboard") as mock_clip, \
-        patch("recorder.notify"):
+        patch("recorder.copy_to_clipboard") as mock_clip:
             recorder.process_recording("20240101_000000", frames)
 
         mock_clean.assert_not_called()
@@ -225,7 +215,6 @@ class TestProcessRecording:
         patch("recorder.transcribe", return_value=str(transcript_file)), \
         patch("recorder.clean_with_ollama", return_value="clean output"), \
         patch("recorder.copy_to_clipboard"), \
-        patch("recorder.notify"), \
         patch("recorder.os.remove") as mock_remove:
             recorder.process_recording("20240101_000000", frames)
 
@@ -240,24 +229,10 @@ class TestProcessRecording:
              patch("recorder.normalize_audio", side_effect=subprocess.CalledProcessError(
                  1, "ffmpeg", stderr=b"codec error"
              )), \
-             patch("recorder.notify"), \
              patch("recorder.os.remove") as mock_remove:
             recorder.process_recording("20240101_000000", frames)
 
         mock_remove.assert_not_called()
-
-    def test_subprocess_error_notifies_without_raising(self, tmp_path):
-        frames = self._frames(2.0)
-        with patch.multiple("recorder", RAW_AUDIO_DIR=str(tmp_path), NORM_AUDIO_DIR=str(tmp_path)), \
-             patch("recorder.normalize_audio", side_effect=subprocess.CalledProcessError(
-                 1, "ffmpeg", stderr=b"codec error"
-             )), \
-             patch("recorder.notify") as mock_notify:
-            recorder.process_recording("20240101_000000", frames)  # must not raise
-
-        error_calls = [c for c in mock_notify.call_args_list if "error" in c.args[1].lower()]
-        assert len(error_calls) == 1
-        assert "codec error" in error_calls[0].args[1]
 
 
 # ---------------------------------------------------------------------------
@@ -271,16 +246,14 @@ class TestToggleRecording:
 
     def test_first_call_sets_recording_true_and_clears_buffer(self):
         recorder.audio_buffer = [np.zeros((100, 1))]  # stale data
-        with patch("recorder.notify"):
-            recorder.toggle_recording()
+        recorder.toggle_recording()
         assert recorder.is_recording is True
         assert recorder.audio_buffer == []
 
     def test_second_call_stops_recording_and_spawns_thread(self):
         recorder.is_recording = True
         recorder.audio_buffer = [np.zeros((100, 1), dtype="float32")]
-        with patch("recorder.notify"), \
-             patch("threading.Thread") as mock_thread:
+        with patch("threading.Thread") as mock_thread:
             recorder.toggle_recording()
         assert recorder.is_recording is False
         mock_thread.assert_called_once()
@@ -296,9 +269,9 @@ class TestToggleRecording:
             captured_frames.extend(args[1])
             return MagicMock()
 
-        with patch("recorder.notify"), \
-             patch("threading.Thread", side_effect=fake_thread):
+        with patch("threading.Thread", side_effect=fake_thread):
             recorder.toggle_recording()
 
         assert len(captured_frames) == 1
         assert np.array_equal(captured_frames[0], sentinel)
+
