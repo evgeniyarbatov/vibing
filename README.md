@@ -16,7 +16,7 @@ mic → raw WAV → ffmpeg loudnorm → whisper small → ollama mistral-nemo �
 | Normalize | ffmpeg `loudnorm` | `data/normalized-audio/TIMESTAMP.wav` |
 | Transcribe | faster-whisper `small` | `data/raw-transcript/TIMESTAMP.txt` |
 | Clean up | ollama `mistral-nemo` | `data/clean-transcript/TIMESTAMP.txt` |
-| Deliver | pbcopy + osascript | clipboard + macOS notification |
+| Deliver | pbcopy | clipboard |
 
 ---
 
@@ -105,6 +105,7 @@ Without this step the key listener silently does nothing.
 
 | Command | What it does |
 |---------|-------------|
+| `make setup` | Create virtualenv and install Python dependencies |
 | `make run` | Start the recorder in the foreground |
 | `make test` | Run the test suite |
 | `make clean` | Remove virtualenv and all captured data |
@@ -118,12 +119,6 @@ Without this step the key listener silently does nothing.
 | Start recording | Tap right Option key once |
 | Stop recording | Tap right Option key again |
 
-A macOS notification appears at each stage:
-- **Recording…** — when recording starts
-- **Processing…** — when processing begins
-- **Transcription copied to clipboard ✓** — when done
-- **Error: …** — if something goes wrong
-
 The cleaned transcript is always saved to `data/clean-transcript/` even if you use the clipboard version.
 
 ---
@@ -134,7 +129,7 @@ The cleaned transcript is always saved to `data/clean-transcript/` even if you u
 → Accessibility permission not granted. See [Grant Accessibility access](#grant-accessibility-access-required).
 
 ### faster-whisper import error
-→ Run `pip install faster-whisper` (or `make install`) and make sure your virtualenv is active.
+→ Run `pip install faster-whisper` (or `make setup`) and make sure your virtualenv is active.
 
 ### ollama connection refused
 → Start ollama: `ollama serve` or install it as a service via `brew services start ollama`.
