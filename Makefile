@@ -29,5 +29,4 @@ clean:
 	@echo "Removing virtualenv and data directories…"
 	rm -rf $(VENV_DIR)
 	rm -f logs/recorder.log logs/recorder.error.log
-	rm -rf data/
 	@echo "Done. Run 'make setup' to reinstall."
