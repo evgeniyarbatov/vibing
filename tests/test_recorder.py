@@ -7,10 +7,11 @@ Hardware is stubbed in conftest.py; these tests cover pure logic only.
 import json
 import os
 import subprocess
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import numpy as np
 import pytest
+import requests
 
 import recorder
 
@@ -102,6 +103,101 @@ class TestParseHotkey:
 
 
 # ---------------------------------------------------------------------------
+# _ollama_post
+# ---------------------------------------------------------------------------
+
+class TestOllamaPost:
+    def _fake_resp(self, data: dict) -> MagicMock:
+        m = MagicMock()
+        m.json.return_value = data
+        return m
+
+    def test_returns_json_on_success(self):
+        with patch("recorder.requests.post", return_value=self._fake_resp({"response": "ok"})):
+            result = recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+        assert result == {"response": "ok"}
+
+    def test_retries_on_timeout(self):
+        good = self._fake_resp({"response": "ok"})
+        with patch("recorder.requests.post", side_effect=[
+            requests.exceptions.Timeout(), good,
+        ]) as mock_post, patch("time.sleep"):
+            result = recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+        assert result == {"response": "ok"}
+        assert mock_post.call_count == 2
+
+    def test_retries_on_connection_error(self):
+        good = self._fake_resp({"response": "ok"})
+        with patch("recorder.requests.post", side_effect=[
+            requests.exceptions.ConnectionError(), good,
+        ]) as mock_post, patch("time.sleep"):
+            result = recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+        assert result == {"response": "ok"}
+        assert mock_post.call_count == 2
+
+    def test_raises_after_max_retries(self):
+        with patch("recorder.requests.post", side_effect=requests.exceptions.Timeout()), \
+             patch("time.sleep"):
+            with pytest.raises(requests.exceptions.Timeout):
+                recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+
+    def test_max_retries_attempts(self):
+        with patch("recorder.requests.post", side_effect=requests.exceptions.Timeout()) as mock_post, \
+             patch("time.sleep"):
+            with pytest.raises(requests.exceptions.Timeout):
+                recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+        assert mock_post.call_count == recorder._MAX_RETRIES
+
+    def test_does_not_retry_http_errors(self):
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = Exception("HTTP 500")
+        with patch("recorder.requests.post", return_value=mock_resp) as mock_post:
+            with pytest.raises(Exception, match="HTTP 500"):
+                recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+        assert mock_post.call_count == 1
+
+    def test_exponential_backoff_delays(self):
+        with patch("recorder.requests.post", side_effect=requests.exceptions.Timeout()), \
+             patch("time.sleep") as mock_sleep:
+            with pytest.raises(requests.exceptions.Timeout):
+                recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+        sleep_args = [c.args[0] for c in mock_sleep.call_args_list]
+        assert sleep_args == [1, 2]  # 1s then 2s; no sleep after final attempt
+
+
+# ---------------------------------------------------------------------------
+# _chunk_text
+# ---------------------------------------------------------------------------
+
+class TestChunkText:
+    def test_short_text_returns_single_chunk(self):
+        text = "Hello world. How are you?"
+        result = recorder._chunk_text(text, max_words=100)
+        assert result == [text]
+
+    def test_splits_at_sentence_boundary(self):
+        sentence_a = "First sentence here."
+        sentence_b = " ".join(["word"] * 5)
+        text = f"{sentence_a} {sentence_b}"
+        result = recorder._chunk_text(text, max_words=4)
+        assert len(result) == 2
+        assert sentence_a in result[0]
+        assert sentence_b in result[1]
+
+    def test_preserves_all_words(self):
+        text = "One two three. Four five six. Seven eight nine."
+        chunks = recorder._chunk_text(text, max_words=4)
+        rejoined = " ".join(chunks)
+        for word in ["One", "two", "three", "Four", "five", "six", "Seven", "eight", "nine"]:
+            assert word in rejoined
+
+    def test_single_long_sentence_stays_as_one_chunk(self):
+        text = " ".join(["word"] * 500)
+        result = recorder._chunk_text(text, max_words=50)
+        assert len(result) == 1
+
+
+# ---------------------------------------------------------------------------
 # clean_with_ollama
 # ---------------------------------------------------------------------------
 
@@ -138,6 +234,27 @@ class TestCleanWithOllama:
              patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}):
             with pytest.raises(Exception, match="HTTP 500"):
                 recorder.clean_with_ollama("x")
+
+    def test_chunks_long_text_into_multiple_calls(self):
+        long_text = ". ".join(["word " * 50] * 10) + "."  # ~500 words in 10 sentences
+        responses = iter(["chunk_clean"] * 20)
+
+        def fake_ollama_post(payload, timeout):
+            return {"response": next(responses)}
+
+        with patch("recorder._ollama_post", side_effect=fake_ollama_post) as mock_post, \
+             patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}):
+            result = recorder.clean_with_ollama(long_text)
+
+        assert mock_post.call_count > 1
+        assert "chunk_clean" in result
+
+    def test_short_text_makes_single_call(self):
+        short_text = "Just a short sentence."
+        with patch("recorder._ollama_post", return_value={"response": "cleaned"}) as mock_post, \
+             patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}):
+            recorder.clean_with_ollama(short_text)
+        assert mock_post.call_count == 1
 
 
 # ---------------------------------------------------------------------------

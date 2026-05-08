@@ -36,3 +36,4 @@ sys.modules["pynput.keyboard"] = _mock_keyboard
 sys.modules["scipy"] = MagicMock()
 sys.modules["scipy.io"] = MagicMock()
 sys.modules["scipy.io.wavfile"] = MagicMock()
+sys.modules["faster_whisper"] = MagicMock()
