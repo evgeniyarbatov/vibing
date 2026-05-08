@@ -45,7 +45,7 @@ brew install ollama
 # Pull the model
 ollama pull mistral-nemo
 
-# Start the server (skip this step after installing the launchd service below)
+# Start the server
 ollama serve
 ```
 
@@ -73,33 +73,17 @@ Edit **`config.json`** in the project root. Changes take effect on the next rest
 |-----|---------|-------------|
 | `ollama_model` | `mistral-nemo` | Any model available in your local ollama (`ollama list`) |
 | `ollama_prompt` | *(see file)* | Prompt sent to ollama. Must contain `{transcription}` — that placeholder is replaced with the raw whisper output |
-| `output_dir` | `data` | Root for all four output subdirectories. Relative paths are resolved from the project root; absolute paths are used as-is |
+| `output_dir` | `~/Documents/vibing` | Root for all four output subdirectories. Relative paths are resolved from the project root; absolute paths are used as-is |
 
 ---
 
-## Quick start (foreground, for testing)
+## Quick start
 
 ```bash
 make run
 ```
 
-This runs the recorder in your terminal. You will see log output in real time.
-Press **right Option** to start/stop recording.
-
----
-
-## Install as a background service
-
-The Makefile installs a **LaunchAgent** that starts at login and restarts automatically if it crashes.
-
-```bash
-make install
-```
-
-This:
-1. Creates `.venv/` and installs Python dependencies.
-2. Generates `~/Library/LaunchAgents/com.vibing.audio-recorder.plist` from the template.
-3. Loads the service via `launchctl`.
+Runs the recorder in your terminal. Log output appears in real time and is also written to `logs/recorder.log`. Press **right Option** to start/stop recording. Stop with `Ctrl-C`.
 
 ### Grant Accessibility access (required)
 
@@ -107,22 +91,17 @@ This:
 
 1. Open **System Settings → Privacy & Security → Accessibility**.
 2. Click **+** and add `.venv/bin/python3` inside this project directory.
-   - If running with `make run` from Terminal, add **Terminal** (or iTerm2) instead.
+   - If running from Terminal, add **Terminal** (or iTerm2) instead.
 
 Without this step the key listener silently does nothing.
 
-### Useful commands
+### Makefile targets
 
 | Command | What it does |
 |---------|-------------|
-| `make install` | Install & start the service |
-| `make uninstall` | Stop & remove the service |
-| `make start` | Start a stopped service |
-| `make stop` | Stop a running service |
-| `make restart` | Restart the service |
-| `make status` | Show whether the service is running |
-| `make logs` | Follow the live log (`recorder.log`) |
-| `make run` | Run in the foreground (debugging) |
+| `make run` | Start the recorder in the foreground |
+| `make logs` | Follow the live log (`logs/recorder.log`) |
+| `make test` | Run the test suite |
 | `make clean` | Remove virtualenv and all captured data |
 
 ---
@@ -150,7 +129,7 @@ The cleaned transcript is always saved to `data/clean-transcript/` even if you u
 → Accessibility permission not granted. See [Grant Accessibility access](#grant-accessibility-access-required).
 
 ### whisper not found
-→ Make sure `whisper` is on your `PATH`. The plist adds `/opt/homebrew/bin` and `/usr/local/bin`. If you installed whisper with pip into a non-standard location, add the path to the `EnvironmentVariables > PATH` entry in the generated plist at `~/Library/LaunchAgents/com.vibing.audio-recorder.plist`.
+→ Make sure `whisper` is on your `PATH`. If you installed it into a non-standard location, add it to your shell's `PATH` before running `make run`.
 
 ### ollama connection refused
 → Start ollama: `ollama serve` or install it as a service via `brew services start ollama`.
@@ -158,23 +137,18 @@ The cleaned transcript is always saved to `data/clean-transcript/` even if you u
 ### First transcription is slow
 → Whisper downloads the `small` model (~244 MB) on first use. Subsequent runs are fast.
 
-### Service keeps restarting
-→ Check `recorder.error.log` for tracebacks. Common causes: missing dependency, mic not available, or accessibility permission not granted.
-
 ---
 
 ## File layout
 
 ```
 vibing/
-├── recorder.py                              # Main daemon
-├── requirements.txt                         # Python deps
-├── Makefile                                 # Install / management targets
-├── com.vibing.audio-recorder.plist.template # LaunchAgent template
-├── README.md
-└── data/
-    ├── raw-audio/          # Captured WAV files
-    ├── normalized-audio/   # ffmpeg-normalized WAV files
-    ├── raw-transcript/     # Raw whisper output
-    └── clean-transcript/   # Ollama-cleaned transcripts
+├── scripts/
+│   └── recorder.py       # Main script
+├── logs/
+│   └── recorder.log      # Written at runtime (gitignored)
+├── config.json           # User configuration
+├── requirements.txt      # Python deps
+├── Makefile
+└── README.md
 ```
