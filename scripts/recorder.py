@@ -207,6 +207,10 @@ def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
         clean_text = clean_with_ollama(raw_text)
         slug = filename_from_ollama(clean_text)
         clean_path = os.path.join(CLEAN_TRANSCRIPT_DIR, f"{slug}.txt")
+        counter = 1
+        while os.path.exists(clean_path):
+            clean_path = os.path.join(CLEAN_TRANSCRIPT_DIR, f"{slug}_{counter}.txt")
+            counter += 1
         with open(clean_path, "w") as f:
             f.write(clean_text)
         log.info("Clean transcript: %s", clean_path)
