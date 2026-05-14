@@ -3,7 +3,7 @@ VENV_DIR := .venv
 PYTHON   := $(VENV_DIR)/bin/python3
 PIP      := $(VENV_DIR)/bin/pip3
 
-.PHONY: all setup test run clean
+.PHONY: all setup test run process clean
 
 all: setup
 
@@ -23,6 +23,10 @@ test: setup
 ## Run the recorder in the foreground
 run: setup
 	$(PYTHON) scripts/recorder.py
+
+## Process existing audio files from recordings_dir (see config.json)
+process: setup
+	$(PYTHON) scripts/process.py
 
 ## Remove virtualenv and all captured data
 clean:
