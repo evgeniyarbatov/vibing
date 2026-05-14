@@ -38,7 +38,14 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-AUDIO_EXTENSIONS = ("*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg", "*.aac")
+AUDIO_EXTENSIONS = (
+    "*.wav", "*.WAV",
+    "*.mp3", "*.MP3",
+    "*.m4a", "*.M4A",
+    "*.flac", "*.FLAC",
+    "*.ogg", "*.OGG",
+    "*.aac", "*.AAC",
+)
 
 
 def find_audio_files(directory: str) -> list[str]:
