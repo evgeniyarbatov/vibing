@@ -32,6 +32,7 @@ _CONFIG_PATH = os.path.join(PROJECT_DIR, "config.json")
 _DEFAULTS: dict = {
     "whisper_model": "small",
     "ollama_model": "mistral-nemo",
+    "ollama_model_russian": "qwen3",
     "ollama_prompt": (
         "Clean up this voice transcription. Fix punctuation and capitalization. "
         "Remove filler words (um, uh, like, you know, so). Do not change the meaning, "
@@ -202,16 +203,24 @@ def _chunk_text(text: str, max_words: int) -> list[str]:
     return chunks
 
 
+def _select_model(text: str) -> str:
+    """Return the Russian model if Cyrillic characters are detected, otherwise the default."""
+    if any("Ѐ" <= ch <= "ӿ" for ch in text):
+        return cfg["ollama_model_russian"]
+    return cfg["ollama_model"]
+
+
 def clean_with_ollama(raw_text: str) -> str:
     words = raw_text.split()
     chunks = _chunk_text(raw_text, _CHUNK_WORDS) if len(words) > _CHUNK_WORDS else [raw_text]
     if len(chunks) > 1:
         log.info("Cleaning in %d chunks (%d words total).", len(chunks), len(words))
+    model = _select_model(raw_text)
     cleaned: list[str] = []
     for chunk in chunks:
         prompt = cfg["ollama_prompt"].format(transcription=chunk)
         result = _ollama_post(
-            {"model": cfg["ollama_model"], "prompt": prompt, "stream": False},
+            {"model": model, "prompt": prompt, "stream": False},
             timeout=120,
         )
         cleaned.append(result["response"].strip())
@@ -222,7 +231,7 @@ def filename_from_ollama(clean_text: str) -> str:
     # Truncate to keep the filename prompt fast regardless of transcript length
     prompt = cfg["ollama_filename_prompt"].format(transcript=clean_text[:500])
     result = _ollama_post(
-        {"model": cfg["ollama_model"], "prompt": prompt, "stream": False},
+        {"model": _select_model(clean_text), "prompt": prompt, "stream": False},
         timeout=60,
     )
     raw = result["response"].strip().lower()
