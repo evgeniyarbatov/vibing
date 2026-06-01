@@ -2,6 +2,5 @@
   "whisper_model": "small",
   "ollama_model": "mistral-nemo",
   "output_dir": "~/Documents/voice-notes",
-  "recordings_dir": "~/Documents/voice-notes/raw-audio",
-  "hotkey": "alt_r"
+  "recordings_dir": "~/Documents/voice-notes/raw-audio"
 }

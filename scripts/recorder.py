@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Audio recorder daemon — configurable hotkey toggles recording.
+Audio recorder daemon — press Enter to toggle recording.
 
 Pipeline: record → ffmpeg loudnorm → whisper small → ollama → clipboard
 """
@@ -20,7 +20,6 @@ import requests
 import scipy.io.wavfile as wavfile
 import sounddevice as sd
 from faster_whisper import WhisperModel
-from pynput import keyboard
 
 # ---------------------------------------------------------------------------
 # Base directory & config
@@ -45,7 +44,6 @@ _DEFAULTS: dict = {
         "Reply with ONLY the filename, nothing else.\n\nTranscript:\n{transcript}"
     ),
     "output_dir": "~/Documents/vibing",
-    "hotkey": "alt_r",
 }
 
 
@@ -63,17 +61,6 @@ def _resolve_output_dir(raw: str) -> str:
     if not os.path.isabs(expanded):
         return os.path.join(PROJECT_DIR, expanded)
     return expanded
-
-
-def _parse_hotkey(name: str) -> keyboard.Key:
-    """Map a pynput Key name string to a Key enum value."""
-    try:
-        return keyboard.Key[name]
-    except KeyError:
-        raise ValueError(
-            f"Unknown hotkey '{name}'. "
-            "Use a pynput Key name, e.g. 'alt_r', 'alt_l', 'cmd', 'f13'."
-        )
 
 
 cfg = _load_config()
@@ -347,11 +334,9 @@ def main() -> None:
     for _d in [RAW_AUDIO_DIR, NORM_AUDIO_DIR, RAW_TRANSCRIPT_DIR, CLEAN_TRANSCRIPT_DIR]:
         os.makedirs(_d, exist_ok=True)
 
-    hotkey = _parse_hotkey(cfg["hotkey"])
     log.info(
-        "Vibing ready — model=%s hotkey=%s output_dir=%s",
+        "Vibing ready — model=%s output_dir=%s (press Enter to start/stop)",
         cfg["ollama_model"],
-        cfg["hotkey"],
         DATA_DIR,
     )
     stream = sd.InputStream(
@@ -363,23 +348,10 @@ def main() -> None:
     )
     stream.start()
 
-    # Track whether another key was pressed while the hotkey was held,
-    # to avoid triggering on hotkey+<something> combos.
-    other_pressed = [False]
-
-    def on_press(key: object) -> None:
-        if key != hotkey:
-            other_pressed[0] = True
-
-    def on_release(key: object) -> None:
-        if key == hotkey:
-            if not other_pressed[0]:
-                toggle_recording()
-            other_pressed[0] = False
-
     try:
-        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-            listener.join()
+        while True:
+            input()
+            toggle_recording()
     except KeyboardInterrupt:
         pass
     finally:
