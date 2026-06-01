@@ -33,10 +33,14 @@ _DEFAULTS: dict = {
     "ollama_model": "mistral-nemo",
     "ollama_model_russian": "qwen3",
     "ollama_prompt": (
-        "Clean up this voice transcription. Fix punctuation and capitalization. "
-        "Remove filler words (um, uh, like, you know, so). Do not change the meaning, "
-        "add information, or summarize. Return only the cleaned text with no preamble "
-        "or explanation.\n\nTranscription:\n{transcription}"
+        "Format this voice transcription into proper written prose. "
+        "Keep every sentence and idea spoken — do not remove, shorten, merge, or omit anything. "
+        "Fix grammar, punctuation, and capitalization. "
+        "Remove only filler sounds (um, uh, er). "
+        "Break into paragraphs where the speaker shifts topic. "
+        "Never use bullet points or lists. Never summarize. "
+        "Return only the formatted transcript with no preamble or explanation.\n\n"
+        "Transcription:\n{transcription}"
     ),
     "ollama_filename_prompt": (
         "Give a short, descriptive filename for this transcript. "
@@ -96,7 +100,7 @@ MIN_DURATION_SEC = 0.5
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
 _MAX_RETRIES = 3
-_CHUNK_WORDS = 300
+_CHUNK_WORDS = 150
 
 _whisper_model: WhisperModel | None = None
 
