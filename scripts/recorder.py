@@ -269,7 +269,7 @@ def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
             counter += 1
         with open(clean_path, "w") as f:
             f.write(clean_text)
-        log.info("Clean transcript: %s", clean_path)
+        log.info("Clean transcript: %s\n\n%s\n", clean_path, clean_text)
 
         # 5. Clipboard
         copy_to_clipboard(clean_text)
