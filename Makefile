@@ -1,7 +1,7 @@
-SHELL    := /bin/bash
+SHELL := /bin/bash
 VENV_DIR := .venv
-PYTHON   := $(VENV_DIR)/bin/python3
-PIP      := $(VENV_DIR)/bin/pip3
+PYTHON := $(VENV_DIR)/bin/python3
+PIP := $(VENV_DIR)/bin/pip3
 
 .PHONY: all setup test run process clean
 
@@ -12,9 +12,9 @@ setup: $(VENV_DIR)
 	@echo "✓ Setup complete. Run 'make run' to start the recorder."
 
 $(VENV_DIR): requirements.txt
-	python3 -m venv $(VENV_DIR)
-	$(PIP) install --upgrade pip --quiet
-	$(PIP) install -r requirements.txt --quiet
+	uv venv $(VENV_DIR)
+	uv pip install --quiet
+	uv pip install -r requirements.txt --quiet
 
 ## Run unit tests
 test: setup
