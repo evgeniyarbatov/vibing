@@ -16,17 +16,14 @@ $(VENV_DIR): requirements.txt
 	uv pip install -r requirements.txt --quiet
 
 ## Run unit tests
-test: setup
+test: $(VENV_DIR) setup
 	$(VENV_DIR)/bin/pytest tests/ -v
-
 ## Run the recorder in the foreground
-run: setup
+run: $(VENV_DIR) setup
 	$(PYTHON) scripts/recorder.py
-
 ## Process existing audio files from recordings_dir (see config.json)
-process: setup
+process: $(VENV_DIR) setup
 	$(PYTHON) scripts/process.py
-
 ## Remove virtualenv and all captured data
 clean:
 	@echo "Removing virtualenv and data directories…"
