@@ -13,7 +13,6 @@ setup: $(VENV_DIR)
 
 $(VENV_DIR): requirements.txt
 	uv venv $(VENV_DIR)
-	uv pip install --quiet
 	uv pip install -r requirements.txt --quiet
 
 ## Run unit tests
