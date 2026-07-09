@@ -1,32 +1,39 @@
+# Uses uv (https://docs.astral.sh/uv) for dependency management — uv sync creates/updates .venv; run commands via uv run, no manual activation.
 SHELL := /bin/bash
-VENV_DIR := .venv
-PYTHON := $(VENV_DIR)/bin/python3
-PIP := $(VENV_DIR)/bin/pip3
 
-.PHONY: all setup test run process clean
+.PHONY: all setup test run process clean lock help
 
 all: setup
 
 ## Create virtualenv and install Python dependencies
-setup: $(VENV_DIR)
+setup:
+	uv sync --dev
 	@echo "✓ Setup complete. Run 'make run' to start the recorder."
 
-$(VENV_DIR): requirements.txt
-	uv venv $(VENV_DIR)
-	uv pip install -r requirements.txt --quiet
-
 ## Run unit tests
-test: $(VENV_DIR) setup
-	$(VENV_DIR)/bin/pytest tests/ -v
+test: setup
+	uv run pytest tests/ -v
 ## Run the recorder in the foreground
-run: $(VENV_DIR) setup
-	$(PYTHON) scripts/recorder.py
+run: setup
+	uv run python scripts/recorder.py
 ## Process existing audio files from recordings_dir (see config.json)
-process: $(VENV_DIR) setup
-	$(PYTHON) scripts/process.py
+process: setup
+	uv run python scripts/process.py
+## Update uv.lock
+lock:
+	uv lock
 ## Remove virtualenv and all captured data
 clean:
 	@echo "Removing virtualenv and data directories…"
-	rm -rf $(VENV_DIR)
+	rm -rf .venv
 	rm -f logs/recorder.log
 	@echo "Done. Run 'make setup' to reinstall."
+
+## Show this help
+help:
+	@echo "setup   - create/update .venv and install dependencies"
+	@echo "test    - run unit tests"
+	@echo "run     - run the recorder in the foreground"
+	@echo "process - process existing audio files"
+	@echo "lock    - update uv.lock"
+	@echo "clean   - remove virtualenv and captured data"

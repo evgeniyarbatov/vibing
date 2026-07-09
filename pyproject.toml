@@ -1,0 +1,19 @@
+[project]
+name = "vibing"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "sounddevice>=0.4.6",
+    "scipy>=1.11.0",
+    "numpy>=1.24.0",
+    "requests>=2.31.0",
+    "faster-whisper>=1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+]
+
+[tool.uv]
+package = false
