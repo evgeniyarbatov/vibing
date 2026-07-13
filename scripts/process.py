@@ -27,7 +27,9 @@ from recorder import (
 
 cfg = _load_config()
 
-LOG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "recorder.log")
+LOG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "recorder.log"
+)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -39,12 +41,18 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 AUDIO_EXTENSIONS = (
-    "*.wav", "*.WAV",
-    "*.mp3", "*.MP3",
-    "*.m4a", "*.M4A",
-    "*.flac", "*.FLAC",
-    "*.ogg", "*.OGG",
-    "*.aac", "*.AAC",
+    "*.wav",
+    "*.WAV",
+    "*.mp3",
+    "*.MP3",
+    "*.m4a",
+    "*.M4A",
+    "*.flac",
+    "*.FLAC",
+    "*.ogg",
+    "*.OGG",
+    "*.aac",
+    "*.AAC",
 )
 
 
@@ -91,7 +99,9 @@ def main() -> None:
     for d in (NORM_AUDIO_DIR, RAW_TRANSCRIPT_DIR, CLEAN_TRANSCRIPT_DIR):
         os.makedirs(d, exist_ok=True)
 
-    recordings_dir = _resolve_output_dir(cfg.get("recordings_dir", "~/Documents/voice-notes/raw-audio"))
+    recordings_dir = _resolve_output_dir(
+        cfg.get("recordings_dir", "~/Documents/voice-notes/raw-audio")
+    )
     if not os.path.isdir(recordings_dir):
         log.error("recordings_dir not found: %s", recordings_dir)
         sys.exit(1)

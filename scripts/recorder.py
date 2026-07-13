@@ -92,7 +92,7 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Fixed config
 # ---------------------------------------------------------------------------
-SAMPLE_RATE = 16_000       # Hz — whisper works best at 16 kHz
+SAMPLE_RATE = 16_000  # Hz — whisper works best at 16 kHz
 CHANNELS = 1
 BLOCK_SIZE = 1024
 MIN_DURATION_SEC = 0.5
@@ -111,6 +111,7 @@ def _get_whisper_model() -> WhisperModel:
         _whisper_model = WhisperModel(cfg["whisper_model"], device="auto", compute_type="int8")
     return _whisper_model
 
+
 # ---------------------------------------------------------------------------
 # State (GIL makes bool/list.append atomic enough for our use)
 # ---------------------------------------------------------------------------
@@ -121,6 +122,7 @@ audio_buffer: list[np.ndarray] = []
 # macOS helpers
 # ---------------------------------------------------------------------------
 
+
 def copy_to_clipboard(text: str) -> None:
     subprocess.run(["pbcopy"], input=text.encode(), check=True)
 
@@ -128,6 +130,7 @@ def copy_to_clipboard(text: str) -> None:
 # ---------------------------------------------------------------------------
 # Pipeline steps
 # ---------------------------------------------------------------------------
+
 
 def normalize_audio(input_path: str, output_path: str) -> None:
     subprocess.run(
@@ -161,13 +164,17 @@ def _ollama_post(payload: dict, timeout: int) -> dict:
             last_exc = exc
             log.warning(
                 "Ollama timeout (attempt %d/%d), retrying in %ds…",
-                attempt, _MAX_RETRIES, delay,
+                attempt,
+                _MAX_RETRIES,
+                delay,
             )
         except requests.exceptions.ConnectionError as exc:
             last_exc = exc
             log.warning(
                 "Ollama connection error (attempt %d/%d), retrying in %ds…",
-                attempt, _MAX_RETRIES, delay,
+                attempt,
+                _MAX_RETRIES,
+                delay,
             )
         if attempt < _MAX_RETRIES:
             time.sleep(delay)
@@ -234,6 +241,7 @@ def filename_from_ollama(clean_text: str) -> str:
 # Processing thread
 # ---------------------------------------------------------------------------
 
+
 def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
     try:
         log.info("Processing started.")
@@ -298,6 +306,7 @@ def process_recording(timestamp: str, frames: list[np.ndarray]) -> None:
 # Recording toggle
 # ---------------------------------------------------------------------------
 
+
 def toggle_recording() -> None:
     global is_recording, audio_buffer
 
@@ -321,9 +330,8 @@ def toggle_recording() -> None:
 # Audio callback (runs on sounddevice thread)
 # ---------------------------------------------------------------------------
 
-def audio_callback(
-    indata: np.ndarray, frames: int, time_info: object, status: object
-) -> None:
+
+def audio_callback(indata: np.ndarray, frames: int, time_info: object, status: object) -> None:
     if status:
         log.debug("Audio status: %s", status)
     if is_recording:
@@ -333,6 +341,7 @@ def audio_callback(
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     for _d in [RAW_AUDIO_DIR, NORM_AUDIO_DIR, RAW_TRANSCRIPT_DIR, CLEAN_TRANSCRIPT_DIR]:

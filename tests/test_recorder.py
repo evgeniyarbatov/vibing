@@ -7,18 +7,17 @@ Hardware is stubbed in conftest.py; these tests cover pure logic only.
 import json
 import os
 import subprocess
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-import requests
-
 import recorder
-
+import requests
 
 # ---------------------------------------------------------------------------
 # _load_config
 # ---------------------------------------------------------------------------
+
 
 class TestLoadConfig:
     def test_returns_all_defaults_when_file_missing(self, tmp_path, monkeypatch):
@@ -32,11 +31,15 @@ class TestLoadConfig:
 
     def test_user_values_override_defaults(self, tmp_path, monkeypatch):
         p = tmp_path / "config.json"
-        p.write_text(json.dumps({
-            "ollama_model": "llama3",
-            "output_dir": "/tmp/audio",
-            "hotkey": "f13",
-        }))
+        p.write_text(
+            json.dumps(
+                {
+                    "ollama_model": "llama3",
+                    "output_dir": "/tmp/audio",
+                    "hotkey": "f13",
+                }
+            )
+        )
         monkeypatch.setattr(recorder, "_CONFIG_PATH", str(p))
         cfg = recorder._load_config()
         assert cfg["ollama_model"] == "llama3"
@@ -49,8 +52,8 @@ class TestLoadConfig:
         monkeypatch.setattr(recorder, "_CONFIG_PATH", str(p))
         cfg = recorder._load_config()
         assert cfg["ollama_model"] == "gemma"
-        assert cfg["output_dir"] == "~/Documents/vibing"   # default intact
-        assert cfg["hotkey"] == "alt_r"                    # default intact
+        assert cfg["output_dir"] == "~/Documents/vibing"  # default intact
+        assert cfg["hotkey"] == "alt_r"  # default intact
 
     def test_unknown_keys_are_passed_through(self, tmp_path, monkeypatch):
         p = tmp_path / "config.json"
@@ -63,6 +66,7 @@ class TestLoadConfig:
 # ---------------------------------------------------------------------------
 # _resolve_output_dir
 # ---------------------------------------------------------------------------
+
 
 class TestResolveOutputDir:
     def test_tilde_expands_to_home(self):
@@ -87,6 +91,7 @@ class TestResolveOutputDir:
 # _parse_hotkey
 # ---------------------------------------------------------------------------
 
+
 class TestParseHotkey:
     def test_valid_key_name_returns_enum_member(self):
         result = recorder._parse_hotkey("alt_r")
@@ -106,6 +111,7 @@ class TestParseHotkey:
 # _ollama_post
 # ---------------------------------------------------------------------------
 
+
 class TestOllamaPost:
     def _fake_resp(self, data: dict) -> MagicMock:
         m = MagicMock()
@@ -114,36 +120,62 @@ class TestOllamaPost:
 
     def test_returns_json_on_success(self):
         with patch("recorder.requests.post", return_value=self._fake_resp({"response": "ok"})):
-            result = recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+            result = recorder._ollama_post(
+                {"model": "m", "prompt": "p", "stream": False}, timeout=30
+            )
         assert result == {"response": "ok"}
 
     def test_retries_on_timeout(self):
         good = self._fake_resp({"response": "ok"})
-        with patch("recorder.requests.post", side_effect=[
-            requests.exceptions.Timeout(), good,
-        ]) as mock_post, patch("time.sleep"):
-            result = recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+        with (
+            patch(
+                "recorder.requests.post",
+                side_effect=[
+                    requests.exceptions.Timeout(),
+                    good,
+                ],
+            ) as mock_post,
+            patch("time.sleep"),
+        ):
+            result = recorder._ollama_post(
+                {"model": "m", "prompt": "p", "stream": False}, timeout=30
+            )
         assert result == {"response": "ok"}
         assert mock_post.call_count == 2
 
     def test_retries_on_connection_error(self):
         good = self._fake_resp({"response": "ok"})
-        with patch("recorder.requests.post", side_effect=[
-            requests.exceptions.ConnectionError(), good,
-        ]) as mock_post, patch("time.sleep"):
-            result = recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
+        with (
+            patch(
+                "recorder.requests.post",
+                side_effect=[
+                    requests.exceptions.ConnectionError(),
+                    good,
+                ],
+            ) as mock_post,
+            patch("time.sleep"),
+        ):
+            result = recorder._ollama_post(
+                {"model": "m", "prompt": "p", "stream": False}, timeout=30
+            )
         assert result == {"response": "ok"}
         assert mock_post.call_count == 2
 
     def test_raises_after_max_retries(self):
-        with patch("recorder.requests.post", side_effect=requests.exceptions.Timeout()), \
-             patch("time.sleep"):
+        with (
+            patch("recorder.requests.post", side_effect=requests.exceptions.Timeout()),
+            patch("time.sleep"),
+        ):
             with pytest.raises(requests.exceptions.Timeout):
                 recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
 
     def test_max_retries_attempts(self):
-        with patch("recorder.requests.post", side_effect=requests.exceptions.Timeout()) as mock_post, \
-             patch("time.sleep"):
+        with (
+            patch(
+                "recorder.requests.post", side_effect=requests.exceptions.Timeout()
+            ) as mock_post,
+            patch("time.sleep"),
+        ):
             with pytest.raises(requests.exceptions.Timeout):
                 recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
         assert mock_post.call_count == recorder._MAX_RETRIES
@@ -157,8 +189,10 @@ class TestOllamaPost:
         assert mock_post.call_count == 1
 
     def test_exponential_backoff_delays(self):
-        with patch("recorder.requests.post", side_effect=requests.exceptions.Timeout()), \
-             patch("time.sleep") as mock_sleep:
+        with (
+            patch("recorder.requests.post", side_effect=requests.exceptions.Timeout()),
+            patch("time.sleep") as mock_sleep,
+        ):
             with pytest.raises(requests.exceptions.Timeout):
                 recorder._ollama_post({"model": "m", "prompt": "p", "stream": False}, timeout=30)
         sleep_args = [c.args[0] for c in mock_sleep.call_args_list]
@@ -168,6 +202,7 @@ class TestOllamaPost:
 # ---------------------------------------------------------------------------
 # _chunk_text
 # ---------------------------------------------------------------------------
+
 
 class TestChunkText:
     def test_short_text_returns_single_chunk(self):
@@ -201,6 +236,7 @@ class TestChunkText:
 # clean_with_ollama
 # ---------------------------------------------------------------------------
 
+
 class TestCleanWithOllama:
     def _fake_resp(self, text: str) -> MagicMock:
         m = MagicMock()
@@ -208,30 +244,42 @@ class TestCleanWithOllama:
         return m
 
     def test_uses_model_from_cfg(self):
-        with patch("recorder.requests.post", return_value=self._fake_resp("ok")) as mock_post, \
-             patch.dict(recorder.cfg, {"ollama_model": "llama3", "ollama_prompt": "{transcription}"}):
+        with (
+            patch("recorder.requests.post", return_value=self._fake_resp("ok")) as mock_post,
+            patch.dict(
+                recorder.cfg, {"ollama_model": "llama3", "ollama_prompt": "{transcription}"}
+            ),
+        ):
             recorder.clean_with_ollama("hello")
         assert mock_post.call_args.kwargs["json"]["model"] == "llama3"
 
     def test_substitutes_transcription_in_prompt(self):
-        with patch("recorder.requests.post", return_value=self._fake_resp("ok")) as mock_post, \
-             patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "Fix: {transcription}"}):
+        with (
+            patch("recorder.requests.post", return_value=self._fake_resp("ok")) as mock_post,
+            patch.dict(
+                recorder.cfg, {"ollama_model": "m", "ollama_prompt": "Fix: {transcription}"}
+            ),
+        ):
             recorder.clean_with_ollama("raw text here")
         prompt = mock_post.call_args.kwargs["json"]["prompt"]
         assert "raw text here" in prompt
         assert "{transcription}" not in prompt
 
     def test_strips_whitespace_from_response(self):
-        with patch("recorder.requests.post", return_value=self._fake_resp("  clean text  \n")), \
-             patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}):
+        with (
+            patch("recorder.requests.post", return_value=self._fake_resp("  clean text  \n")),
+            patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}),
+        ):
             result = recorder.clean_with_ollama("x")
         assert result == "clean text"
 
     def test_propagates_http_errors(self):
         mock_resp = MagicMock()
         mock_resp.raise_for_status.side_effect = Exception("HTTP 500")
-        with patch("recorder.requests.post", return_value=mock_resp), \
-             patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}):
+        with (
+            patch("recorder.requests.post", return_value=mock_resp),
+            patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}),
+        ):
             with pytest.raises(Exception, match="HTTP 500"):
                 recorder.clean_with_ollama("x")
 
@@ -242,8 +290,10 @@ class TestCleanWithOllama:
         def fake_ollama_post(payload, timeout):
             return {"response": next(responses)}
 
-        with patch("recorder._ollama_post", side_effect=fake_ollama_post) as mock_post, \
-             patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}):
+        with (
+            patch("recorder._ollama_post", side_effect=fake_ollama_post) as mock_post,
+            patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}),
+        ):
             result = recorder.clean_with_ollama(long_text)
 
         assert mock_post.call_count > 1
@@ -251,8 +301,10 @@ class TestCleanWithOllama:
 
     def test_short_text_makes_single_call(self):
         short_text = "Just a short sentence."
-        with patch("recorder._ollama_post", return_value={"response": "cleaned"}) as mock_post, \
-             patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}):
+        with (
+            patch("recorder._ollama_post", return_value={"response": "cleaned"}) as mock_post,
+            patch.dict(recorder.cfg, {"ollama_model": "m", "ollama_prompt": "{transcription}"}),
+        ):
             recorder.clean_with_ollama(short_text)
         assert mock_post.call_count == 1
 
@@ -260,6 +312,7 @@ class TestCleanWithOllama:
 # ---------------------------------------------------------------------------
 # process_recording
 # ---------------------------------------------------------------------------
+
 
 class TestProcessRecording:
     def _frames(self, seconds: float) -> list[np.ndarray]:
@@ -271,17 +324,19 @@ class TestProcessRecording:
         transcript_file = tmp_path / "20240101_000000.txt"
         transcript_file.write_text("raw whisper output")
 
-        with patch.multiple(
-            "recorder",
-            RAW_AUDIO_DIR=str(tmp_path),
-            NORM_AUDIO_DIR=str(tmp_path),
-            RAW_TRANSCRIPT_DIR=str(tmp_path),
-            CLEAN_TRANSCRIPT_DIR=str(tmp_path),
-        ), \
-        patch("recorder.normalize_audio") as mock_norm, \
-        patch("recorder.transcribe", return_value=str(transcript_file)) as mock_tr, \
-        patch("recorder.clean_with_ollama", return_value="clean output") as mock_clean, \
-        patch("recorder.copy_to_clipboard") as mock_clip:
+        with (
+            patch.multiple(
+                "recorder",
+                RAW_AUDIO_DIR=str(tmp_path),
+                NORM_AUDIO_DIR=str(tmp_path),
+                RAW_TRANSCRIPT_DIR=str(tmp_path),
+                CLEAN_TRANSCRIPT_DIR=str(tmp_path),
+            ),
+            patch("recorder.normalize_audio") as mock_norm,
+            patch("recorder.transcribe", return_value=str(transcript_file)) as mock_tr,
+            patch("recorder.clean_with_ollama", return_value="clean output") as mock_clean,
+            patch("recorder.copy_to_clipboard") as mock_clip,
+        ):
             recorder.process_recording("20240101_000000", frames)
 
         mock_norm.assert_called_once()
@@ -294,17 +349,19 @@ class TestProcessRecording:
         transcript_file = tmp_path / "20240101_000000.txt"
         transcript_file.write_text("   ")  # whitespace only
 
-        with patch.multiple(
-            "recorder",
-            RAW_AUDIO_DIR=str(tmp_path),
-            NORM_AUDIO_DIR=str(tmp_path),
-            RAW_TRANSCRIPT_DIR=str(tmp_path),
-            CLEAN_TRANSCRIPT_DIR=str(tmp_path),
-        ), \
-        patch("recorder.normalize_audio"), \
-        patch("recorder.transcribe", return_value=str(transcript_file)), \
-        patch("recorder.clean_with_ollama") as mock_clean, \
-        patch("recorder.copy_to_clipboard") as mock_clip:
+        with (
+            patch.multiple(
+                "recorder",
+                RAW_AUDIO_DIR=str(tmp_path),
+                NORM_AUDIO_DIR=str(tmp_path),
+                RAW_TRANSCRIPT_DIR=str(tmp_path),
+                CLEAN_TRANSCRIPT_DIR=str(tmp_path),
+            ),
+            patch("recorder.normalize_audio"),
+            patch("recorder.transcribe", return_value=str(transcript_file)),
+            patch("recorder.clean_with_ollama") as mock_clean,
+            patch("recorder.copy_to_clipboard") as mock_clip,
+        ):
             recorder.process_recording("20240101_000000", frames)
 
         mock_clean.assert_not_called()
@@ -321,18 +378,20 @@ class TestProcessRecording:
         transcript_file = transcript_dir / "20240101_000000.txt"
         transcript_file.write_text("raw whisper output")
 
-        with patch.multiple(
-            "recorder",
-            RAW_AUDIO_DIR=str(raw_dir),
-            NORM_AUDIO_DIR=str(norm_dir),
-            RAW_TRANSCRIPT_DIR=str(transcript_dir),
-            CLEAN_TRANSCRIPT_DIR=str(transcript_dir),
-        ), \
-        patch("recorder.normalize_audio"), \
-        patch("recorder.transcribe", return_value=str(transcript_file)), \
-        patch("recorder.clean_with_ollama", return_value="clean output"), \
-        patch("recorder.copy_to_clipboard"), \
-        patch("recorder.os.remove") as mock_remove:
+        with (
+            patch.multiple(
+                "recorder",
+                RAW_AUDIO_DIR=str(raw_dir),
+                NORM_AUDIO_DIR=str(norm_dir),
+                RAW_TRANSCRIPT_DIR=str(transcript_dir),
+                CLEAN_TRANSCRIPT_DIR=str(transcript_dir),
+            ),
+            patch("recorder.normalize_audio"),
+            patch("recorder.transcribe", return_value=str(transcript_file)),
+            patch("recorder.clean_with_ollama", return_value="clean output"),
+            patch("recorder.copy_to_clipboard"),
+            patch("recorder.os.remove") as mock_remove,
+        ):
             recorder.process_recording("20240101_000000", frames)
 
         removed = [call.args[0] for call in mock_remove.call_args_list]
@@ -342,11 +401,14 @@ class TestProcessRecording:
 
     def test_audio_files_not_removed_on_pipeline_error(self, tmp_path):
         frames = self._frames(2.0)
-        with patch.multiple("recorder", RAW_AUDIO_DIR=str(tmp_path), NORM_AUDIO_DIR=str(tmp_path)), \
-             patch("recorder.normalize_audio", side_effect=subprocess.CalledProcessError(
-                 1, "ffmpeg", stderr=b"codec error"
-             )), \
-             patch("recorder.os.remove") as mock_remove:
+        with (
+            patch.multiple("recorder", RAW_AUDIO_DIR=str(tmp_path), NORM_AUDIO_DIR=str(tmp_path)),
+            patch(
+                "recorder.normalize_audio",
+                side_effect=subprocess.CalledProcessError(1, "ffmpeg", stderr=b"codec error"),
+            ),
+            patch("recorder.os.remove") as mock_remove,
+        ):
             recorder.process_recording("20240101_000000", frames)
 
         mock_remove.assert_not_called()
@@ -355,6 +417,7 @@ class TestProcessRecording:
 # ---------------------------------------------------------------------------
 # toggle_recording
 # ---------------------------------------------------------------------------
+
 
 class TestToggleRecording:
     def setup_method(self):
@@ -391,4 +454,3 @@ class TestToggleRecording:
 
         assert len(captured_frames) == 1
         assert np.array_equal(captured_frames[0], sentinel)
-
