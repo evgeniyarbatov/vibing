@@ -10,10 +10,12 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
 import time
+from typing import Any, cast
 
 import numpy as np
 import requests
@@ -28,7 +30,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
 
 _CONFIG_PATH = os.path.join(PROJECT_DIR, "config.json")
-_DEFAULTS: dict = {
+_DEFAULTS: dict[str, Any] = {
     "whisper_model": "small",
     "ollama_model": "mistral-nemo",
     "ollama_model_russian": "qwen3",
@@ -51,11 +53,11 @@ _DEFAULTS: dict = {
 }
 
 
-def _load_config() -> dict:
+def _load_config() -> dict[str, Any]:
     if not os.path.exists(_CONFIG_PATH):
         return _DEFAULTS.copy()
     with open(_CONFIG_PATH) as f:
-        user = json.load(f)
+        user: dict[str, Any] = json.load(f)
     return {**_DEFAULTS, **user}
 
 
@@ -123,8 +125,12 @@ audio_buffer: list[np.ndarray] = []
 # ---------------------------------------------------------------------------
 
 
+_PBCOPY = shutil.which("pbcopy") or "/usr/bin/pbcopy"
+_FFMPEG = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
+
+
 def copy_to_clipboard(text: str) -> None:
-    subprocess.run(["pbcopy"], input=text.encode(), check=True)
+    subprocess.run([_PBCOPY], input=text.encode(), check=True)  # noqa: S603 -- fixed argv, no shell
 
 
 # ---------------------------------------------------------------------------
@@ -133,8 +139,8 @@ def copy_to_clipboard(text: str) -> None:
 
 
 def normalize_audio(input_path: str, output_path: str) -> None:
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", input_path, "-af", "loudnorm", output_path],
+    subprocess.run(  # noqa: S603 -- fixed argv, no shell
+        [_FFMPEG, "-y", "-i", input_path, "-af", "loudnorm", output_path],
         capture_output=True,
         check=True,
     )
@@ -151,7 +157,7 @@ def transcribe(audio_path: str, output_dir: str) -> str:
     return out_path
 
 
-def _ollama_post(payload: dict, timeout: int) -> dict:
+def _ollama_post(payload: dict[str, Any], timeout: int) -> dict[str, Any]:
     """POST to Ollama with exponential-backoff retries on timeout/connection errors."""
     delay = 1
     last_exc: Exception = RuntimeError("no attempts made")
@@ -159,7 +165,8 @@ def _ollama_post(payload: dict, timeout: int) -> dict:
         try:
             resp = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
             resp.raise_for_status()
-            return resp.json()
+            result: dict[str, Any] = resp.json()
+            return result
         except requests.exceptions.Timeout as exc:
             last_exc = exc
             log.warning(
@@ -204,8 +211,8 @@ def _chunk_text(text: str, max_words: int) -> list[str]:
 def _select_model(text: str) -> str:
     """Return the Russian model if Cyrillic characters are detected, otherwise the default."""
     if any("Ѐ" <= ch <= "ӿ" for ch in text):
-        return cfg["ollama_model_russian"]
-    return cfg["ollama_model"]
+        return cast(str, cfg["ollama_model_russian"])
+    return cast(str, cfg["ollama_model"])
 
 
 def clean_with_ollama(raw_text: str) -> str:
