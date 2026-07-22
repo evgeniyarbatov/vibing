@@ -323,6 +323,7 @@ class TestProcessRecording:
             patch("recorder.normalize_audio") as mock_norm,
             patch("recorder.transcribe", return_value=str(transcript_file)) as mock_tr,
             patch("recorder.clean_with_ollama", return_value="clean output") as mock_clean,
+            patch("recorder.filename_from_ollama", return_value="a_transcript"),
             patch("recorder.copy_to_clipboard") as mock_clip,
         ):
             recorder.process_recording("20240101_000000", frames)
@@ -377,6 +378,7 @@ class TestProcessRecording:
             patch("recorder.normalize_audio"),
             patch("recorder.transcribe", return_value=str(transcript_file)),
             patch("recorder.clean_with_ollama", return_value="clean output"),
+            patch("recorder.filename_from_ollama", return_value="a_transcript"),
             patch("recorder.copy_to_clipboard"),
             patch("recorder.os.remove") as mock_remove,
         ):
