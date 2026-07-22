@@ -1,23 +1,23 @@
 # Uses uv (https://docs.astral.sh/uv) for dependency management — uv sync creates/updates .venv; run commands via uv run, no manual activation.
 SHELL := /bin/bash
 
-.PHONY: all setup test run process clean lock help
+.PHONY: all install test run process clean lock help
 
-all: setup
+all: install
 
 ## Create virtualenv and install Python dependencies
-setup:
+install:
 	uv sync --dev
-	@echo "✓ Setup complete. Run 'make run' to start the recorder."
+	@echo "✓ Install complete. Run 'make run' to start the recorder."
 
 ## Run unit tests
-test: setup
+test: install
 	uv run pytest tests/ -v
 ## Run the recorder in the foreground
-run: setup
+run: install
 	uv run python scripts/recorder.py
 ## Process existing audio files from recordings_dir (see config.json)
-process: setup
+process: install
 	uv run python scripts/process.py
 ## Update uv.lock
 lock:
@@ -27,11 +27,11 @@ clean:
 	@echo "Removing virtualenv and data directories…"
 	rm -rf .venv
 	rm -f logs/recorder.log
-	@echo "Done. Run 'make setup' to reinstall."
+	@echo "Done. Run 'make install' to reinstall."
 
 ## Show this help
 help:
-	@echo "setup   - create/update .venv and install dependencies"
+	@echo "install - create/update .venv and install dependencies"
 	@echo "test    - run unit tests"
 	@echo "run     - run the recorder in the foreground"
 	@echo "process - process existing audio files"
