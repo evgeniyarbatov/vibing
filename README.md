@@ -1,5 +1,7 @@
 # vibing
 
+[![tests](https://github.com/evgeniyarbatov/vibing/actions/workflows/tests.yml/badge.svg)](https://github.com/evgeniyarbatov/vibing/actions/workflows/tests.yml)
+
 Press the **right Option key** to start recording. Press it again to stop. Your speech is transcribed, cleaned up, and copied to the clipboard — all locally, no cloud needed.
 
 Inspired by [Vibing](https://vibingjustspeakit.github.io/Vibing/).
