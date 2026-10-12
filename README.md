@@ -6,6 +6,12 @@ Press the **right Option key** to start recording. Press it again to stop. Your 
 
 Inspired by [Vibing](https://vibingjustspeakit.github.io/Vibing/).
 
+## Status
+
+| Folder | Status | Last touched | Next step |
+|---|---|---|---|
+| root | parked | 2026-07-29 | — |
+
 ## Pipeline
 
 ```
