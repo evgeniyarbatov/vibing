@@ -171,7 +171,7 @@ You already have `make process`. Extend it:
 
 *Goal: It runs like a utility, not a project you babysit.*
 
-- **`make install`** — venv, deps, pull default models, print Accessibility checklist.
+- **`make setup`** — venv, deps, pull default models, print Accessibility checklist.
 - **Login item (optional):** `launchd` plist template that runs `make run` in a dedicated Terminal window or `tmux` session.
 - **Single instance lock** — prevent two recorders fighting for the mic.
 - **Log rotation** — `logs/recorder.log` capped or dated.

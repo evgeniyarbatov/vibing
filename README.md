@@ -102,7 +102,6 @@ Without this step the key listener silently does nothing.
 | `make setup` | Create virtualenv and install Python dependencies |
 | `make run` | Start the recorder in the foreground |
 | `make test` | Run the test suite |
-| `make clean` | Remove virtualenv and all captured data |
 
 ## Usage
 
